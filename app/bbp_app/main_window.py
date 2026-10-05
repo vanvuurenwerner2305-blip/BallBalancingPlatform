@@ -18,7 +18,8 @@ from .widgets.api_reference import CONTROL, TRACKING, ApiReference
 from .widgets.camera_view import CameraView
 from .widgets.code_editor import CodeEditor
 from .widgets.plots import LivePlots
-from .widgets.setup_tab import SetupTab
+from .widgets.docs_dialog import DocsDialog
+from .widgets.setup_tab import ModelDialog, SetupTab
 from .widgets.view3d import PlatformView
 
 
@@ -98,6 +99,10 @@ class MainWindow(QMainWindow):
         self.runner.printed.connect(lambda t: self.console_write(t, "#2b2b2b"))
         self.runner.stopped.connect(self._on_stopped)
 
+        self.model_dialog = ModelDialog(self)
+        self.model_dialog.form.changed.connect(self._settings_changed)
+        self.model_dialog.applyRequested.connect(self._apply_model)
+        self.docs_dialog = DocsDialog(self)
         self._build_toolbar()
         self.tabs = QTabWidget()
         self.setup = SetupTab()
@@ -156,6 +161,11 @@ class MainWindow(QMainWindow):
         self.speed.currentIndexChanged.connect(self._speed_changed)
         tb.addWidget(self.speed)
         tb.addSeparator()
+        act("⚙  Simulated hardware", self.show_model, None,
+            "Ball size and mass, friction, servos, camera model: the simulator's physical model")
+        act("📖  Documentation", self.show_docs, "F1", "Guides for the vision and control libraries, "
+            "and the physics model")
+        tb.addSeparator()
         self.project_label = QLabel()
         tb.addWidget(self.project_label)
         self._set_running(False)
@@ -203,7 +213,11 @@ class MainWindow(QMainWindow):
                                 "(PC time x the factor in Setup)")
         g.addWidget(self.lbl_time, 0, 0)
         g.addWidget(self.lbl_mode, 0, 1)
-        g.addWidget(self.lbl_cpu, 0, 2, 1, 3)
+        g.addWidget(self.lbl_cpu, 0, 2, 1, 2)
+        hw = QPushButton("⚙ Simulated hardware...")
+        hw.setToolTip("Ball size and mass, friction, servos, camera model")
+        hw.clicked.connect(self.show_model)
+        g.addWidget(hw, 0, 4)
         g.addWidget(QLabel("Live target [mm]"), 1, 0)
         self.tx = QDoubleSpinBox()
         self.ty = QDoubleSpinBox()
@@ -255,6 +269,7 @@ class MainWindow(QMainWindow):
             page.editor.setPlainText(project.read_source(name))
             page.show_diagnostics([])
         self.setup.set_values(project.settings)
+        self.model_dialog.form.set_values(project.settings)
         self.project_label.setText(f"  Project: <b>{project.name}</b>  <span style='color:#6b6a65'>"
                                    f"({project.path})</span>")
         self.setWindowTitle(f"{project.name} - Ball Balancing Platform")
@@ -286,14 +301,32 @@ class MainWindow(QMainWindow):
             return
         for name, page in self.pages.items():
             self.project.write_source(name, page.editor.toPlainText())
-        self.project.settings = self.setup.values()
+        self.project.settings = self.all_values()
         self.project.save_settings()
         self.status.setText("Saved.")
 
+    def all_values(self):
+        """Setup (experiment) and Simulated hardware (model) settings together."""
+        return {**self.setup.values(), **self.model_dialog.form.values()}
+
     def _settings_changed(self):
         if self.project:
-            self.project.settings = self.setup.values()
+            self.project.settings = self.all_values()
             self.project.save_settings()
+
+    def show_model(self):
+        self.model_dialog.show()
+        self.model_dialog.raise_()
+        self.model_dialog.activateWindow()
+
+    def show_docs(self):
+        self.docs_dialog.show()
+        self.docs_dialog.raise_()
+        self.docs_dialog.activateWindow()
+
+    def _apply_model(self):
+        self._settings_changed()
+        self.run()
 
     # ------------------------------------------------------------------ build & run
     def run(self):
@@ -334,12 +367,12 @@ class MainWindow(QMainWindow):
         self._start_runner(result.exe)
 
     def _start_runner(self, exe):
-        values = self.setup.values()
+        values = self.all_values()
         values["sim.speed"] = self.speed.currentData()
         settings_path = self.project.build_dir / "settings.txt"
         schema.write_settings_file(values, settings_path)
         self.ball_material = values["ball.material"]
-        self.view3d.set_ball_material(self.ball_material)
+        self.view3d.set_ball(self.ball_material, values["ball.radius_mm"])
         self.plots.clear()
         self.camera.clear()
         self.last_meas = None

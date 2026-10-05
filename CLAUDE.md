@@ -12,7 +12,7 @@ Remote: https://github.com/vanvuurenwerner2305-blip/BallBalancingPlatform.git
 
 Students create **projects**. A project is a folder holding `project.json` (the Setup values), `tracking.cpp` and `control.cpp`. By default it lives under `~/Documents/BBP Projects/`.
 
-1. **Setup** is a settings tab, not a script. It holds the artificial effects (sensor delay, FPS cap, motor delay, position noise, the modelled FireBeetle run time) and the ball, target, camera, control and physics options. `app/bbp_app/settings_schema.py` defines them, and `framework/src/settings.cpp` parses them. Keep the two in sync.
+1. **Setup** is a settings tab, not a script. Settings have two scopes, set by their group in `app/bbp_app/settings_schema.py`. **setup** settings describe the experiment and apply on the real platform too: target, artificial effects, camera fps and exposure, and control limits. They appear in the Setup tab. **model** settings exist only in the simulator: ball radius, mass and wall thickness (presets fill these in), contact, servos, plate, camera noise and lens, and gravity. They appear in the *Simulated hardware* dialog. `framework/src/settings.cpp` parses both, so keep the two files in sync.
 2. **Tracking** implements `void track(const Image&, Detection&)`. It receives the camera image and reports the ball centre in pixels.
 3. **Control** implements `void control(const Ball&, const Target&, Platform&)`. It reads the ball state, already converted to mm on the plate with history and filtered velocity, and sets `platform.angleX`/`angleY` in degrees. It never touches motors directly.
 
@@ -44,7 +44,7 @@ CM="/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonEx
 ./build/Release/bbp_sim_demo.exe build/demo   # closed loop through the simulated camera
 sh tools/check_esp32_core.sh                  # cross-compile core/ for the ESP32-S3 (float, -Wdouble-promotion -Werror)
 python tools/plot/make_figures.py build/csv build/demo docs/physics/figures
-cd docs/physics && latexmk                    # paper -> docs/physics/build/bbp_physics_model.pdf
+sh tools/build_docs.sh                        # physics paper + control/vision guides -> app/assets/docs/*.pdf
 "/c/Program Files/FreeCAD 1.0/bin/freecadcmd.exe" -c "exec(open('tools/cad/extract_geometry.py').read())"  # regenerate cad_geometry.hpp
 ```
 
@@ -86,7 +86,7 @@ The app compiles projects against the libraries in `build/Release`, so build the
   - The 3D view (`widgets/view3d.py`, VTK) animates the CAD meshes. The plate follows the simulated pose. Each crank rotates about its CAD axis by θ − θ_CAD, and each rod rotates in its leg plane from its CAD pin and joint to the simulated ones.
   - The camera view shows the frames actually handed to `track()`, after the sensor delay and FPS cap, with the student's detection drawn on top.
 - **`tests/`**: a self-contained test harness. Most tests compare against closed-form physics, such as 5/7 g sin β and the 2/7 Ω turntable orbit, and the paper's verification table quotes their output.
-- **`docs/physics/`**: the LaTeX model specification. Its figures are generated from test and demo output.
+- **`docs/`**: three LaTeX documents: `physics/` (the model specification), `control/` and `vision/` (student guides to the two libraries). All share `docs/physics/references.bib`. The built PDFs are committed in `app/assets/docs/`, because the app's Documentation button opens them. Rebuild them with `tools/build_docs.sh` after editing. The guides quote the student API and the design numbers (G ≈ 122 mm/s² per degree, the starter-code gains), so update them when `bbp.hpp`, the templates or the defaults change.
 
 ## Mechanical reference
 

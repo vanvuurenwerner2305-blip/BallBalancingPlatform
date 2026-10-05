@@ -1,0 +1,4 @@
+# Build with:  latexmk  (from this folder). Output goes to build/. References are shared with docs/physics.
+$pdf_mode = 1;
+$out_dir = 'build';
+ensure_path('BIBINPUTS', '.', '../physics', '../../physics');

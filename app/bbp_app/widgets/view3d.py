@@ -90,6 +90,7 @@ class PlatformView(QWidget):
             self.legs.append(leg)
 
         sphere = vtkSphereSource()
+        self.sphere = sphere
         sphere.SetRadius(10.0)
         sphere.SetThetaResolution(40)
         sphere.SetPhiResolution(30)
@@ -138,8 +139,9 @@ class PlatformView(QWidget):
         n.SetFeatureAngle(35)
         return self._actor(n.GetOutputPort(), _hex(colour), opacity)
 
-    def set_ball_material(self, material):
+    def set_ball(self, material, radius_mm):
         self.ball.GetProperty().SetColor(*BALL_COLOURS.get(material, BALL_COLOURS["steel"]))
+        self.sphere.SetRadius(float(radius_mm))
 
     def update_state(self, s):
         # plate: CAD pose has R = I and the top face at z = plate_top
