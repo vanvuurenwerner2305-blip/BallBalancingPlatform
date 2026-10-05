@@ -1,0 +1,5 @@
+# Build with:  latexmk  (from docs/physics). Output goes to build/.
+$pdf_mode = 1;
+$out_dir = 'build';
+@default_files = ('bbp_physics_model.tex');
+ensure_path('BIBINPUTS', '.', '..');

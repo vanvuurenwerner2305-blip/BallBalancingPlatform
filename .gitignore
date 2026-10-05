@@ -1,0 +1,6 @@
+build/
+docs/physics/build/
+__pycache__/
+*.pyc
+.vs/
+.vscode/

@@ -1,0 +1,11 @@
+# Python environment for the BBP app (conda-forge builds of Qt/VTK; isolated from Anaconda base).
+#   conda env create -f app/environment.yml
+name: bbp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pyside6
+  - vtk
+  - pyqtgraph
+  - numpy
